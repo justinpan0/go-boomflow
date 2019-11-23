@@ -3,46 +3,25 @@ package rest
 import (
 	"context"
 	"encoding/json"
-	"errors"
 	"fmt"
 	"net/http"
 	"strconv"
-	"strings"
 	"sync"
 	"time"
 
 	"github.com/gin-gonic/gin"
 	"github.com/segmentio/kafka-go"
+	"github.com/shopspring/decimal"
 	"github.com/siddontang/go-log/log"
 	"github.com/zimengpan/go-boomflow/conf"
-	"github.com/zimengpan/go-boomflow/matching"
+	"github.com/zimengpan/go-boomflow/match"
 	"github.com/zimengpan/go-boomflow/models"
 	"github.com/zimengpan/go-boomflow/service"
-	"github.com/zimengpan/go-boomflow/utils"
 )
 
 var productId2Writer sync.Map
-var assetPari2ProductId sync.Map
 
-func getWriter(assetA string, assetB string) *kafka.Writer {
-	key := assetA + assetB
-	if assetA > assetB {
-		key := assetB + assetA
-	}
-
-	productId, found := assetPari2ProductId.Load(key)
-	if !found {
-		product, err := GetProductByAssetPair(makerAssetData, takerAssetData)
-		if err != nil {
-			return nil, err
-		}
-		if product == nil {
-			return nil, errors.New(fmt.Sprintf("product not found: %v", productId))
-		}
-		productId = product.Id
-		assetPari2ProductId.Store(key, productId)
-	}
-
+func getWriter(productId string) *kafka.Writer {
 	writer, found := productId2Writer.Load(productId)
 	if found {
 		return writer.(*kafka.Writer)
@@ -52,7 +31,7 @@ func getWriter(assetA string, assetB string) *kafka.Writer {
 
 	newWriter := kafka.NewWriter(kafka.WriterConfig{
 		Brokers:      gbeConfig.Kafka.Brokers,
-		Topic:        matching.TopicOrderPrefix + productId,
+		Topic:        match.TopicOrderPrefix + productId,
 		Balancer:     &kafka.LeastBytes{},
 		BatchTimeout: 5 * time.Millisecond,
 	})
@@ -67,7 +46,7 @@ func submitOrder(order *models.Order) {
 		return
 	}
 
-	err = getWriter(order.MakerAssetData, order.TakerAssetData).WriteMessages(context.Background(), kafka.Message{Value: buf})
+	err = getWriter(order.ProductId).WriteMessages(context.Background(), kafka.Message{Value: buf})
 	if err != nil {
 		log.Error(err)
 	}
@@ -91,12 +70,12 @@ func PlaceOrder(ctx *gin.Context) {
 	}
 	feeRecipientAddress := req.FeeRecipientAddress
 	senderAddress := req.SenderAddress
-	makerAssetAmount := req.MakerAssetAmount
-	takerAssetAmount := req.TakerAssetAmount
-	makerFee := req.MakerFee
-	takerFee := req.TakerFee
-	expirationTimeSeconds := req.ExpirationTimeSeconds
-	salt := req.Salt
+	makerAssetAmount := decimal.NewFromFloat(req.MakerAssetAmount)
+	takerAssetAmount := decimal.NewFromFloat(req.TakerAssetAmount)
+	makerFee := decimal.NewFromFloat(req.MakerFee)
+	takerFee := decimal.NewFromFloat(req.TakerFee)
+	expirationTimeSeconds := decimal.NewFromFloat(req.ExpirationTimeSeconds)
+	salt := decimal.NewFromFloat(req.Salt)
 	makerAssetData := req.MakerAssetData
 	takerAssetData := req.TakerAssetData
 	makerFeeAssetData := req.MakerFeeAssetData
@@ -133,26 +112,16 @@ func PlaceOrder(ctx *gin.Context) {
 // 撤销指定id的订单
 // DELETE /orders/1
 // DELETE /orders/client:1
-func CancelOrder(ctx *gin.Context) {
+/*func CancelOrder(ctx *gin.Context) {
 	rawOrderId := ctx.Param("orderId")
 
 	var order *models.Order
 	var err error
-	if strings.HasPrefix(rawOrderId, "client:") {
-		clientOid := strings.Split(rawOrderId, ":")[1]
-		order, err = service.GetOrderByClientOid(GetCurrentUser(ctx).Id, clientOid)
-	} else {
-		orderId, _ := utils.AToInt64(rawOrderId)
-		order, err = service.GetOrderById(orderId)
-	}
+	orderId, _ := utils.AToInt64(rawOrderId)
+	order, err = service.GetOrderById(orderId)
 
 	if err != nil {
 		ctx.JSON(http.StatusInternalServerError, newMessageVo(err))
-		return
-	}
-
-	if order == nil || order.UserId != GetCurrentUser(ctx).Id {
-		ctx.JSON(http.StatusNotFound, newMessageVo(errors.New("order not found")))
 		return
 	}
 
@@ -161,10 +130,10 @@ func CancelOrder(ctx *gin.Context) {
 
 	ctx.JSON(http.StatusOK, nil)
 }
-
+*/
 // 批量撤单
 // DELETE /orders/?productId=BTC-USDT&side=[buy,sell]
-func CancelOrders(ctx *gin.Context) {
+/*func CancelOrders(ctx *gin.Context) {
 	productId := ctx.Query("productId")
 
 	var side *models.Side
@@ -191,14 +160,22 @@ func CancelOrders(ctx *gin.Context) {
 	}
 
 	ctx.JSON(http.StatusOK, nil)
-}
+}*/
 
 // GET /orders
 func GetOrders(ctx *gin.Context) {
-	makerAssetData := ctx.Query("makerAssetData")
-	takerAssetData := ctx.Query("takerAssetData")
-
+	productId := ctx.Query("productId")
+	makerAddress := ctx.Query("makerAddress")
+	var side *models.Side
 	var err error
+	rawSide := ctx.GetString("side")
+	if len(rawSide) > 0 {
+		side, err = models.NewSideFromString(rawSide)
+		if err != nil {
+			ctx.JSON(http.StatusBadRequest, newMessageVo(err))
+			return
+		}
+	}
 
 	var statuses []models.OrderStatus
 	statusValues := ctx.QueryArray("status")
@@ -213,8 +190,9 @@ func GetOrders(ctx *gin.Context) {
 
 	before, _ := strconv.ParseInt(ctx.Query("before"), 10, 64)
 	after, _ := strconv.ParseInt(ctx.Query("after"), 10, 64)
+	limit, _ := strconv.ParseInt(ctx.Query("limit"), 10, 64)
 
-	orders, err := service.GetOrdersByUserId(makerAddress, statuses, makerAssetData, takerAssetData, before, after)
+	orders, err := service.GetOrdersByUserId(makerAddress, statuses, side, productId, before, after, int(limit))
 	if err != nil {
 		ctx.JSON(http.StatusInternalServerError, newMessageVo(err))
 		return

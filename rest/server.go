@@ -4,6 +4,7 @@ import (
 	"io/ioutil"
 
 	"github.com/gin-gonic/gin"
+	"github.com/siddontang/go-log/log"
 )
 
 type HttpServer struct {
@@ -27,7 +28,9 @@ func (server *HttpServer) Start() {
 	r.POST("/api/orders", PlaceOrder)
 
 	err := r.Run(server.addr)
+	log.Info("here")
 	if err != nil {
+		log.Info("there")
 		panic(err)
 	}
 }

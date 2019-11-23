@@ -7,6 +7,31 @@ import (
 	"github.com/shopspring/decimal"
 )
 
+// 用于表示一笔订单或者交易的方向：买，卖
+type Side string
+
+func NewSideFromString(s string) (*Side, error) {
+	side := Side(s)
+	switch side {
+	case SideBuy:
+	case SideSell:
+	default:
+		return nil, fmt.Errorf("invalid side: %v", s)
+	}
+	return &side, nil
+}
+
+func (s Side) Opposite() Side {
+	if s == SideBuy {
+		return SideSell
+	}
+	return SideBuy
+}
+
+func (s Side) String() string {
+	return string(s)
+}
+
 // 用于表示订单状态
 type OrderStatus string
 
@@ -34,6 +59,9 @@ type DoneReason string
 type TransactionStatus string
 
 const (
+	SideBuy  = Side("buy")
+	SideSell = Side("sell")
+
 	// 初始状态
 	OrderStatusNew = OrderStatus("new")
 	// 已经加入orderBook
@@ -52,21 +80,19 @@ const (
 	TransactionStatusCompleted = TransactionStatus("completed")
 )
 
+type Asset struct {
+	Currency  string `gorm:"column:currency;primary_key"`
+	CreatedAt time.Time
+	UpdatedAt time.Time
+	AssetData string
+}
+
 type Product struct {
-	Id             string `gorm:"column:id;primary_key"`
-	CreatedAt      time.Time
-	UpdatedAt      time.Time
-	BaseCurrency   string
-	QuoteCurrency  string
-	BaseMinSize    decimal.Decimal `sql:"type:decimal(32,16);"`
-	BaseMaxSize    decimal.Decimal `sql:"type:decimal(32,16);"`
-	QuoteMinSize   decimal.Decimal `sql:"type:decimal(32,16);"`
-	QuoteMaxSize   decimal.Decimal `sql:"type:decimal(32,16);"`
-	BaseAssetData  string
-	QuoteAssetData string
-	BaseScale      int32
-	QuoteScale     int32
-	QuoteIncrement float64
+	Id            string `gorm:"column:id;primary_key"`
+	CreatedAt     time.Time
+	UpdatedAt     time.Time
+	BaseCurrency  string
+	QuoteCurrency string
 }
 
 type Order struct {
@@ -83,8 +109,8 @@ type Order struct {
 	TakerFee              decimal.Decimal
 	ExpirationTimeSeconds decimal.Decimal `sql:"type:decimal(32,16);"`
 	Salt                  decimal.Decimal
-	MakerAssetData        string
-	TakerAssetData        string
+	Side                  Side
+	ProductId             string
 	MakerFeeAssetData     string
 	TakerFeeAssetData     string
 	Signature             string

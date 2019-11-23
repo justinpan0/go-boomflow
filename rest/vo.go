@@ -4,7 +4,7 @@ import (
 	"time"
 
 	"github.com/zimengpan/go-boomflow/models"
-	"github.com/zimengpan/go-boomflow/utils"
+	"github.com/zimengpan/go-boomflow/service"
 )
 
 type messageVo struct {
@@ -18,7 +18,27 @@ func newMessageVo(error error) *messageVo {
 }
 
 type placeOrderRequest struct {
-	Hash                  string `json:"hash"`
+	Hash                  string  `json:"hash"`
+	MakerAddress          string  `json:"makerAddress"`
+	TakerAddress          string  `json:"takerAddress"`
+	FeeRecipientAddress   string  `json:"feeRecipientAddress"`
+	SenderAddress         string  `json:"senderAddress"`
+	MakerAssetAmount      float64 `json:"makerAssetAmount"`
+	TakerAssetAmount      float64 `json:"takerAssetAmount"`
+	MakerFee              float64 `json:"makerFee"`
+	TakerFee              float64 `json:"takerFee"`
+	ExpirationTimeSeconds float64 `json:"expirationTimeSeconds"`
+	Salt                  float64 `json:"salt"`
+	MakerAssetData        string  `json:"makerAssetData"`
+	TakerAssetData        string  `json:"takerAssetData"`
+	MakerFeeAssetData     string  `json:"makerFeeAssetData"`
+	TakerFeeAssetData     string  `json:"takerFeeAssetData"`
+	Signature             string  `json:"signature"`
+}
+
+type orderVo struct {
+	Id                    string `json:"Id"`
+	CreatedAt             string `json:"CreatedAt"`
 	MakerAddress          string `json:"makerAddress"`
 	TakerAddress          string `json:"takerAddress"`
 	FeeRecipientAddress   string `json:"feeRecipientAddress"`
@@ -29,45 +49,21 @@ type placeOrderRequest struct {
 	TakerFee              string `json:"takerFee"`
 	ExpirationTimeSeconds string `json:"expirationTimeSeconds"`
 	Salt                  string `json:"salt"`
-	MakerAssetData        string `json:"makerAssetData"`
-	TakerAssetData        string `json:"takerAssetData"`
+	Side                  string `json:"Side"`
+	ProductId             string `json:"ProductId"`
 	MakerFeeAssetData     string `json:"makerFeeAssetData"`
 	TakerFeeAssetData     string `json:"takerFeeAssetData"`
 	Signature             string `json:"signature"`
-}
-
-type orderVo struct {
-	Id                    string `json:"Id"`
-	CreatedAt             string `json:"CreatedAt"`
-	UpdatedAt             string `json:"UpdatedAt"`
-	makerAddress          string `json:"makerAddress"`
-	takerAddress          string `json:"takerAddress"`
-	feeRecipientAddress   string `json:"feeRecipientAddress"`
-	senderAddress         string `json:"senderAddress"`
-	makerAssetAmount      string `json:"makerAssetAmount"`
-	takerAssetAmount      string `json:"takerAssetAmount"`
-	makerFee              string `json:"makerFee"`
-	takerFee              string `json:"takerFee"`
-	expirationTimeSeconds string `json:"expirationTimeSeconds"`
-	salt                  string `json:"salt"`
-	makerAssetData        string `json:"makerAssetData"`
-	takerAssetData        string `json:"takerAssetData"`
-	makerFeeAssetData     string `json:"makerFeeAssetData"`
-	takerFeeAssetData     string `json:"takerFeeAssetData"`
-	signature             string `json:"signature"`
 	Status                string `json:"Status"`
-	Settled               string `json:"Settled"`
+	Settled               bool   `json:"Settled"`
 }
 
 type ProductVo struct {
 	Id             string `json:"id"`
 	BaseCurrency   string `json:"baseCurrency"`
 	QuoteCurrency  string `json:"quoteCurrency"`
-	BaseMinSize    string `json:"baseMinSize"`
-	BaseMaxSize    string `json:"baseMaxSize"`
-	QuoteIncrement string `json:"quoteIncrement"`
-	BaseScale      int32  `json:"baseScale"`
-	QuoteScale     int32  `json:"quoteScale"`
+	BaseAssetData  string `json:"BaseAssetData"`
+	QuoteAssetData string `json:"QuoteAssetData"`
 }
 
 type orderBookVo struct {
@@ -77,37 +73,36 @@ type orderBookVo struct {
 }
 
 func newProductVo(product *models.Product) *ProductVo {
+	base, _ := service.GetAssetByCurrency(product.BaseCurrency)
+	quote, _ := service.GetAssetByCurrency(product.QuoteCurrency)
 	return &ProductVo{
 		Id:             product.Id,
 		BaseCurrency:   product.BaseCurrency,
 		QuoteCurrency:  product.QuoteCurrency,
-		BaseMinSize:    product.BaseMinSize.String(),
-		BaseMaxSize:    product.BaseMaxSize.String(),
-		QuoteIncrement: utils.F64ToA(product.QuoteIncrement),
-		BaseScale:      product.BaseScale,
-		QuoteScale:     product.QuoteScale,
+		BaseAssetData:  base.AssetData,
+		QuoteAssetData: quote.AssetData,
 	}
 }
 
 func newOrderVo(order *models.Order) *orderVo {
 	return &orderVo{
-		CreatedAt:             order.CreatedAt,
+		CreatedAt:             order.CreatedAt.Format(time.RFC3339),
 		MakerAddress:          order.MakerAddress,
 		TakerAddress:          order.TakerAddress,
 		FeeRecipientAddress:   order.FeeRecipientAddress,
 		SenderAddress:         order.SenderAddress,
-		MakerAssetAmount:      order.MakerAssetAmount,
-		TakerAssetAmount:      order.TakerAssetAmount,
-		MakerFee:              order.MakerFee,
-		TakerFee:              order.TakerFee,
-		ExpirationTimeSeconds: order.ExpirationTimeSeconds,
-		Salt:                  order.Salt,
-		MakerAssetData:        order.MakerAssetData,
-		TakerAssetData:        order.TakerAssetData,
+		MakerAssetAmount:      order.MakerAssetAmount.String(),
+		TakerAssetAmount:      order.TakerAssetAmount.String(),
+		MakerFee:              order.MakerFee.String(),
+		TakerFee:              order.TakerFee.String(),
+		ExpirationTimeSeconds: order.ExpirationTimeSeconds.String(),
+		Salt:                  order.Salt.String(),
+		Side:                  order.Side.String(),
+		ProductId:             order.ProductId,
 		MakerFeeAssetData:     order.MakerFeeAssetData,
 		TakerFeeAssetData:     order.TakerFeeAssetData,
 		Signature:             order.Signature,
-		Status:                order.Status,
-		Settled:               order.Settled
+		Status:                order.Status.String(),
+		Settled:               order.Settled,
 	}
 }

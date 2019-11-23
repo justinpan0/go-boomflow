@@ -3,11 +3,65 @@ package service
 import (
 	"errors"
 	"fmt"
-	"log"
+	"time"
 
 	"github.com/shopspring/decimal"
 	"github.com/zimengpan/go-boomflow/models"
 )
+
+var n, _ = decimal.NewFromString("10000000000000000")
+
+var mockOrderDB1 = map[string]*models.Order{
+	"1": &models.Order{
+		1,
+		time.Date(2019, time.November, 10, 23, 0, 0, 0, time.UTC),
+		time.Date(2019, time.November, 10, 23, 0, 0, 0, time.UTC),
+		"0x9e56625509c2f60af937f23b7b532600390e8c8b",
+		"TakerAddress          string",
+		"FeeRecipientAddress   string",
+		"SenderAddress         string",
+		n,
+		n,
+		n,
+		n,
+		n,
+		n,
+		models.SideSell,
+		"1",
+		"0x02571792000000000000000000000000371b13d97f4bf77d724e78c16b7dc74099f40e840000000000000000000000000000000000000000000000000000000000000063",
+		"0xf47261b0000000000000000000000000e41d2489571d322189246dafa5ebde1f4699f498",
+		"0x012761a3ed31b43c8780e905a260a35faefcc527be7516aa11c0256729b5b351bc33",
+		models.OrderStatusNew,
+		false,
+	},
+}
+
+var mockOrderDB2 = map[string][]*models.Order{
+	"0x9e56625509c2f60af937f23b7b532600390e8c8b": []*models.Order{
+		&models.Order{
+			1,
+			time.Date(2019, time.November, 10, 23, 0, 0, 0, time.UTC),
+			time.Date(2019, time.November, 10, 23, 0, 0, 0, time.UTC),
+			"0x9e56625509c2f60af937f23b7b532600390e8c8b",
+			"TakerAddress          string",
+			"FeeRecipientAddress   string",
+			"SenderAddress         string",
+			n,
+			n,
+			n,
+			n,
+			n,
+			n,
+			models.SideSell,
+			"1",
+			"0x02571792000000000000000000000000371b13d97f4bf77d724e78c16b7dc74099f40e840000000000000000000000000000000000000000000000000000000000000063",
+			"0xf47261b0000000000000000000000000e41d2489571d322189246dafa5ebde1f4699f498",
+			"0x012761a3ed31b43c8780e905a260a35faefcc527be7516aa11c0256729b5b351bc33",
+			models.OrderStatusNew,
+			false,
+		},
+	},
+}
 
 func PlaceOrder(
 	makerAddress string,
@@ -24,35 +78,48 @@ func PlaceOrder(
 	takerAssetData string,
 	makerFeeAssetData string,
 	takerFeeAssetData string,
-	signature string
+	signature string,
 ) (*models.Order, error) {
 	product, err := GetProductByAssetPair(makerAssetData, takerAssetData)
 	if err != nil {
 		return nil, err
 	}
 	if product == nil {
-		return nil, errors.New(fmt.Sprintf("product not found: %v", productId))
+		return nil, errors.New(fmt.Sprintf("product not found: %v - %v", makerAssetData, takerAssetData))
+	}
+
+	baseAsset, err := GetAssetByCurrency(product.BaseCurrency)
+	if err != nil {
+		return nil, err
+	}
+	if baseAsset == nil {
+		return nil, errors.New(fmt.Sprintf("asset not found: %v - %v", makerAssetData, takerAssetData))
+	}
+
+	side := models.SideBuy
+	if baseAsset.AssetData == takerAssetData {
+		side = models.SideSell
 	}
 
 	order := &models.Order{
-		MakerAddress: 			makerAddress,
-		TakerAddress: 			takerAddress,
-		FeeRecipientAddress: 	feeRecipientAddress,
-		SenderAddress: 			senderAddress,
-		MakerAssetAmount: 		makerAssetAmount,
-		TakerAssetAmount: 		takerAssetAmount,
-		MakerFee: 				makerFee,
-		TakerFee: 				takerFee,
-		ExpirationTimeSeconds: 	expirationTimeSeconds,
-		Salt: 					salt,
-		MakerAssetData: 		makerAssetData,
-		TakerAssetData: 		takerAssetData,
-		MakerFeeAssetData: 		makerFeeAssetData,
-		TakerFeeAssetData: 		takerFeeAssetData,
-		Signature: 				signature,
-		Status:    				models.OrderStatusNew,
+		MakerAddress:          makerAddress,
+		TakerAddress:          takerAddress,
+		FeeRecipientAddress:   feeRecipientAddress,
+		SenderAddress:         senderAddress,
+		MakerAssetAmount:      makerAssetAmount,
+		TakerAssetAmount:      takerAssetAmount,
+		MakerFee:              makerFee,
+		TakerFee:              takerFee,
+		ExpirationTimeSeconds: expirationTimeSeconds,
+		Salt:                  salt,
+		Side:                  side,
+		ProductId:             product.Id,
+		MakerFeeAssetData:     makerFeeAssetData,
+		TakerFeeAssetData:     takerFeeAssetData,
+		Signature:             signature,
+		Status:                models.OrderStatusNew,
 	}
-	return order
+	return order, nil
 	// tx
 	/*
 		var holdCurrency string
@@ -77,7 +144,7 @@ func PlaceOrder(
 		return order, db.CommitTx()*/
 }
 
-func UpdateOrderStatus(orderId int64, oldStatus, newStatus models.OrderStatus) (bool, error) {
+/*func UpdateOrderStatus(orderId int64, oldStatus, newStatus models.OrderStatus) (bool, error) {
 	return mysql.SharedStore().UpdateOrderStatus(orderId, oldStatus, newStatus)
 }
 
@@ -214,16 +281,18 @@ func ExecuteFill(orderId int64) error {
 
 	return db.CommitTx()
 }
-
-func GetOrderById(orderId int64) (*models.Order, error) {
+*/
+/*func GetOrderById(orderId int64) (*models.Order, error) {
 	return mysql.SharedStore().GetOrderById(orderId)
 }
-
+*/
+/*
 func GetOrderByClientOid(userId int64, clientOid string) (*models.Order, error) {
 	return mysql.SharedStore().GetOrderByClientOid(userId, clientOid)
 }
-
-func GetOrdersByUserId(userId int64, statuses []models.OrderStatus, side *models.Side, productId string,
+*/
+func GetOrdersByUserId(makerAddress string, statuses []models.OrderStatus, side *models.Side, productId string,
 	beforeId, afterId int64, limit int) ([]*models.Order, error) {
-	return mysql.SharedStore().GetOrdersByUserId(userId, statuses, side, productId, beforeId, afterId, limit)
+	return mockOrderDB2[makerAddress], nil
+	//return mysql.SharedStore().GetOrdersByUserId(userId, statuses, side, productId, beforeId, afterId, limit)
 }
