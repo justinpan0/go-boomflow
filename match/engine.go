@@ -53,7 +53,7 @@ func NewEngine(product *models.Product, orderReader OrderReader) *Engine {
 
 func (e *Engine) Start() {
 	go e.runFetcher()
-	//go e.runApplier()
+	go e.runApplier()
 	//go e.runCommitter()
 	//go e.runSnapshots()
 }

@@ -108,7 +108,7 @@ type Order struct {
 	MakerFee              decimal.Decimal
 	TakerFee              decimal.Decimal
 	ExpirationTimeSeconds decimal.Decimal `sql:"type:decimal(32,16);"`
-	Salt                  decimal.Decimal
+	Salt                  int64
 	Side                  Side
 	ProductId             string
 	MakerFeeAssetData     string

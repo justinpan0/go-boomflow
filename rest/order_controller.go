@@ -75,7 +75,7 @@ func PlaceOrder(ctx *gin.Context) {
 	makerFee := decimal.NewFromFloat(req.MakerFee)
 	takerFee := decimal.NewFromFloat(req.TakerFee)
 	expirationTimeSeconds := decimal.NewFromFloat(req.ExpirationTimeSeconds)
-	salt := decimal.NewFromFloat(req.Salt)
+	salt := req.Salt
 	makerAssetData := req.MakerAssetData
 	takerAssetData := req.TakerAssetData
 	makerFeeAssetData := req.MakerFeeAssetData

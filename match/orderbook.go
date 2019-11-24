@@ -57,14 +57,15 @@ func NewOrderBook(product *models.Product) *orderBook {
 
 func (o *orderBook) ApplyOrder(order *models.Order) (logs []Log) {
 	// prevent orders from being submitted repeatedly to the matching engine
-	err := o.orderIdWindow.put(order.Id)
+	log.Info("Order: ", order.Signature)
+	err := o.orderIdWindow.put(order.Salt)
 	if err != nil {
 		log.Error(err)
 		return logs
 	}
-	log.Info("Order: ", order.Signature)
-	takerOrder := newBookOrder(order)
 
+	takerOrder := newBookOrder(order)
+	log.Info("Order Price", takerOrder.Price)
 	if takerOrder.Size.GreaterThan(decimal.Zero) {
 		// If taker has an uncompleted size, put taker in orderBook
 		o.depths[takerOrder.Side].add(*takerOrder)

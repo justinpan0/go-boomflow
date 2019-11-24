@@ -1,6 +1,7 @@
 package rest
 
 import (
+	"strconv"
 	"time"
 
 	"github.com/zimengpan/go-boomflow/models"
@@ -28,7 +29,7 @@ type placeOrderRequest struct {
 	MakerFee              float64 `json:"makerFee"`
 	TakerFee              float64 `json:"takerFee"`
 	ExpirationTimeSeconds float64 `json:"expirationTimeSeconds"`
-	Salt                  float64 `json:"salt"`
+	Salt                  int64   `json:"salt"`
 	MakerAssetData        string  `json:"makerAssetData"`
 	TakerAssetData        string  `json:"takerAssetData"`
 	MakerFeeAssetData     string  `json:"makerFeeAssetData"`
@@ -96,7 +97,7 @@ func newOrderVo(order *models.Order) *orderVo {
 		MakerFee:              order.MakerFee.String(),
 		TakerFee:              order.TakerFee.String(),
 		ExpirationTimeSeconds: order.ExpirationTimeSeconds.String(),
-		Salt:                  order.Salt.String(),
+		Salt:                  strconv.FormatInt(order.Salt, 10),
 		Side:                  order.Side.String(),
 		ProductId:             order.ProductId,
 		MakerFeeAssetData:     order.MakerFeeAssetData,

@@ -34,11 +34,18 @@ func GetProductById(id string) (*models.Product, error) {
 
 func GetProductByAssetPair(assetA string, assetB string) (*models.Product, error) {
 	//return mysql.SharedStore().GetProductById(id)
-	key := assetA + assetB
-	if assetA > assetB {
-		key = assetB + assetA
+	aA, _ := GetAssetByAssetData(assetA)
+	aB, _ := GetAssetByAssetData(assetB)
+
+	symbolA := aA.Currency
+	symbolB := aB.Currency
+
+	key := symbolA + symbolB
+	if symbolA > symbolB {
+		key = symbolB + symbolA
 	}
-	return mockProductDB1[key], nil
+
+	return mockProductDB2[key], nil
 }
 
 func GetProducts() ([]*models.Product, error) {
