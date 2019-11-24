@@ -109,6 +109,7 @@ func PlaceOrder(ctx *gin.Context) {
 	ctx.JSON(http.StatusOK, order)
 }
 
+//TODO: Implementation
 // 撤销指定id的订单
 // DELETE /orders/1
 // DELETE /orders/client:1

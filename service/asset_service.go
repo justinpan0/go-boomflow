@@ -38,9 +38,11 @@ var mockAssetDB2 = map[string]*models.Asset{
 }
 
 func GetAssetByCurrency(currency string) (*models.Asset, error) {
+	//TODO: Implementation
 	return mockAssetDB1[currency], nil
 }
 
 func GetAssetByAssetData(assetData string) (*models.Asset, error) {
+	//TODO: Implementation
 	return mockAssetDB2[assetData], nil
 }

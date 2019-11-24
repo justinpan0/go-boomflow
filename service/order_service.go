@@ -293,6 +293,7 @@ func GetOrderByClientOid(userId int64, clientOid string) (*models.Order, error) 
 */
 func GetOrdersByUserId(makerAddress string, statuses []models.OrderStatus, side *models.Side, productId string,
 	beforeId, afterId int64, limit int) ([]*models.Order, error) {
+	//TODO: Implementation
 	return mockOrderDB2[makerAddress], nil
 	//return mysql.SharedStore().GetOrdersByUserId(userId, statuses, side, productId, beforeId, afterId, limit)
 }

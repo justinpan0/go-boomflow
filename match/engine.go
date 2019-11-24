@@ -114,6 +114,7 @@ func (e *Engine) runApplier() {
 	}
 }
 
+//TODO: Implementation
 // 将orderBook产生的log进行持久化，同时需要响应snapshot审批
 /*func (e *Engine) runCommitter() {
 	var seq = e.OrderBook.logSeq
@@ -168,6 +169,7 @@ func (e *Engine) runApplier() {
 	}
 }*/
 
+//TODO: Implementation
 // 定时发起快照请求，同时负责持久化通过审批的快照
 /*func (e *Engine) runSnapshots() {
 	// 最后一次快照时的order orderOffset
